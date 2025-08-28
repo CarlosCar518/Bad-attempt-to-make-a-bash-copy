@@ -27,7 +27,7 @@ int main(void)
     char *buffer;
     do
     {
-        printf("¿");
+        printf("<<");
         read(&line);
         if (line.state == STOP)
         {

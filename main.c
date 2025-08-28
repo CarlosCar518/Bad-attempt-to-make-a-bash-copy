@@ -27,7 +27,7 @@ int main(void)
     char *buffer;
     do
     {
-        printf("?");
+        printf("¿");
         read(&line);
         if (line.state == STOP)
         {
@@ -87,10 +87,10 @@ int find_command(char* token)
         if (strcmp(token, command_list[i].name) == SUCCESS)
         {
             command_list[i].fn();
-            return true;
+            return 1;
         }
     }
 
     printf("Command %s is not valid\n", token);
-    return false;
+    return 0;
 }

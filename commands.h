@@ -17,6 +17,8 @@ void command_print_arg();
 void command_remove();
 void command_print_serie();
 void command_print_message();
+void command_wd();
+void command_change_dir();
 
 
 extern flow_struct line;

@@ -80,7 +80,8 @@ void take_com(flow_struct st)
 int find_command(char* token)
 {
     commands command_list[] = { {"lt" , command_print_serie}, {"pm", command_print_message},
-{"exit", command_exit} ,{"pr", command_print_arg}, {"rm", command_remove},{NULL, NULL}};
+{"exit", command_exit} ,{"pr", command_print_arg}, {"rm", command_remove},{"pwd",command_wd},{"cd", command_change_dir},
+{NULL, NULL}};
 
     for (int i = 0; command_list[i].name != NULL ;i++)
     {

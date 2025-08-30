@@ -24,6 +24,7 @@ void command_remove_dir();
 void command_help();
 void command_listFiles();
 void command_print_date();
+void command_joke();
 
 
 extern flow_struct line;

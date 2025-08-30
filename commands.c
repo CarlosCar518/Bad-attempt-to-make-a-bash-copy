@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <direct.h>
+#include <curl/curl.h>
 #include <Windows.h>
 #include <time.h>
 
@@ -103,6 +104,7 @@ void command_help()
 
 void command_listFiles()
 {
+    //I get the cwd and adjust it adding \* in order to get all the files and meet the Win API specifications
     char* path = _getcwd(NULL, 0);
     int pathLen = strlen(path);
 
@@ -137,4 +139,25 @@ void command_print_date()
     time(&currentTime);
 
     printf("%s\n",ctime(&currentTime));
+}
+
+void command_joke()
+{
+    curl_global_init(CURL_GLOBAL_WIN32);
+
+    CURL* handle = curl_easy_init();
+
+    curl_easy_setopt(handle, CURLOPT_URL, "https://icanhazdadjoke.com/");
+
+    struct curl_slist *headers = NULL;
+   
+    headers = curl_slist_append(headers, "Accept: text/plain");
+
+    curl_easy_setopt(handle, CURLOPT_HTTPHEADER, headers);
+
+    curl_easy_perform(handle);
+
+    printf("\n");
+
+    curl_global_cleanup();
 }

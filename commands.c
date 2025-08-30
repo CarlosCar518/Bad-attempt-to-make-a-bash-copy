@@ -1,8 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <Windows.h>
 #include <direct.h>
+#include <Windows.h>
+#include <time.h>
+
 #include "commands.h"
 
 void command_print_serie()
@@ -93,8 +95,46 @@ void command_remove_dir()
 void command_help()
 {
     printf("        Commands list:\n");
-    printf("lt -- prints the numbers from 1 to 100 (dont ask me why)\npm -- prints a nice message\nexit -- exits the shell\npr -- prints the next argument\n");
+    printf("lt -- prints the numbers from 1 to 100 (dont ask me why)\npm -- prints a nice message\nex -- exits the shell\npr -- prints the next argument\n");
 
     printf("rm -- deletes the file with the name of the argument\npwd -- prints the current working directory\ncd -- changes the current working directory to the argument\n");
     printf("mkdir -- creates a new directory\nrmdir -- deletes the directory\n");
+}
+
+void command_listFiles()
+{
+    char* path = _getcwd(NULL, 0);
+    int pathLen = strlen(path);
+
+    path = realloc(path, pathLen + 3);
+
+    path[pathLen++] = '\\';
+    path[pathLen++] = '*';
+    path[pathLen] = '\0';
+
+    WIN32_FIND_DATAA pathData;
+    HANDLE hFind;
+
+    if ((hFind = FindFirstFile(path, &pathData)) == INVALID_HANDLE_VALUE )
+    {
+        printf("Erorr\n");
+    }
+
+    while (FindNextFile(hFind, &pathData))
+    {
+        if (strcmp(pathData.cFileName, ".") == 0 || strcmp(pathData.cFileName, "..") == 0 )
+            continue;
+        printf("%s\n", pathData.cFileName);
+    }
+
+    FindClose(hFind);
+    free(path);
+}
+
+void command_print_date()
+{
+    time_t currentTime;
+    time(&currentTime);
+
+    printf("%s\n",ctime(&currentTime));
 }

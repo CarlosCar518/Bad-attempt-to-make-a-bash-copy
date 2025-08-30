@@ -3,10 +3,7 @@
 #include <string.h>
 #include "commands.h"
 
-
-
 #define global_internal static
-
 
 typedef void (*cmd_fn)(void);
 
@@ -17,7 +14,6 @@ typedef struct {
 
 flow_struct line;
 
-
 void read(flow_struct * st);
 void take_com(flow_struct st);
 int find_command(char* token);
@@ -27,7 +23,7 @@ int main(void)
     char *buffer;
     do
     {
-        printf("<<");
+        printf("?");
         read(&line);
         if (line.state == STOP)
         {
@@ -38,7 +34,9 @@ int main(void)
             break;
         free(line.buff);
         
-    } while (1); 
+    } while (1);
+    
+    return 0;
 }
 
 void read(flow_struct* st)
@@ -81,7 +79,7 @@ int find_command(char* token)
 {
     commands command_list[] = { {"lt" , command_print_serie}, {"pm", command_print_message},
 {"exit", command_exit} ,{"pr", command_print_arg}, {"rm", command_remove},{"pwd",command_wd},{"cd", command_change_dir},
-{NULL, NULL}};
+{"mkdir", command_make_dir},{"rmdir", command_remove_dir},{"help", command_help},{NULL, NULL}};
 
     for (int i = 0; command_list[i].name != NULL ;i++)
     {

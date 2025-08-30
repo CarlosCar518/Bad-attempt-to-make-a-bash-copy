@@ -13,7 +13,7 @@ void command_print_serie()
 
 void command_print_message()
 {
-    printf("Hoy comí perro\n");
+    printf("Hoy comi perro\n");
 }
 
 void command_exit()
@@ -64,7 +64,7 @@ void command_change_dir()
 {
     char* token = strtok(NULL, " ");
 
-    if(!_chdir(token))
+    if(_chdir(token))
     {
         printf("Path not found\n"); 
     }
@@ -74,8 +74,27 @@ void command_make_dir()
 {
     char* token = strtok(NULL, " ");
 
-    if (!_mkdir(token))
+    if (_mkdir(token))
     {
         printf("Error\n");
     }
+}
+
+void command_remove_dir()
+{
+    char* token = strtok(NULL, " ");
+
+    if (rmdir(token))
+    {
+        printf("Error\n");
+    }
+}
+
+void command_help()
+{
+    printf("        Commands list:\n");
+    printf("lt -- prints the numbers from 1 to 100 (dont ask me why)\npm -- prints a nice message\nexit -- exits the shell\npr -- prints the next argument\n");
+
+    printf("rm -- deletes the file with the name of the argument\npwd -- prints the current working directory\ncd -- changes the current working directory to the argument\n");
+    printf("mkdir -- creates a new directory\nrmdir -- deletes the directory\n");
 }

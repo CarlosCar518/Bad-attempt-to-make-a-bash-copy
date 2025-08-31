@@ -44,7 +44,7 @@ void command_remove()
     }
 }
 
-void command_wd()
+void command_print_currentWorkingDir()
 {
     char* pwd = _getcwd(NULL, 0);
 

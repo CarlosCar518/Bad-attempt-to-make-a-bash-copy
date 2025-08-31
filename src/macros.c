@@ -3,7 +3,6 @@
 #include <string.h>
 #include <direct.h>
 #include <Windows.h>
-
 #include "commands.h"
 
 void macro_autocomplete(char* prefix, flow_struct* st)

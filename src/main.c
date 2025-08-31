@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <windows.h>
+#include <dirent.h>
 #include <conio.h>
 #include "commands.h"
 
@@ -20,16 +22,15 @@ typedef struct {
 }commands;
 
 internal void shell_execute(flow_struct * st);
-internal void take_com(flow_struct st);
-internal int find_command(char* token);
+internal void take_command(flow_struct st);
 internal void buffer_add_char(flow_struct* st, char c);
 
-global_internal commands command_list[] = { 
+global_internal commands buff_commands[] = { 
     {"lt" , command_print_serie}, 
     {"pm", command_print_message},
     {"pr", command_print_arg}, 
     {"rm", command_remove},
-    {"pwd",command_wd},
+    {"pwd",command_print_currentWorkingDir},
     {"cd", command_change_dir},
     {"mkdir", command_make_dir},
     {"rmdir", command_remove_dir},
@@ -77,7 +78,7 @@ internal void shell_execute(flow_struct* st)
                 if (strcmp(st->buff,"ex") == 0)
                     return;
 
-                take_com(*st);
+                take_command(*st);
                 printf("?");
                 break;
 
@@ -97,7 +98,7 @@ internal void shell_execute(flow_struct* st)
                 printf("%c",c);
                 break;  
             }
-        }
+        }     
     }
 }
 
@@ -116,26 +117,17 @@ internal void buffer_add_char(flow_struct* st, char c)
     (st->buff)[st->pos] = '\0';
 }
 
-internal void take_com(flow_struct st)
+internal void take_command(flow_struct st)
 {
+    int i;
     char* token = strtok(st.buff, " ");
-    int flag;
     do
     {
-        flag = find_command(token);
-    } while ((token = strtok(NULL, " ")) && flag);
-}
-
-internal int find_command(char* token)
-{
-    for (int i = 0; command_list[i].name != NULL ;i++)
-    {
-        if (strcmp(token, command_list[i].name) == SUCCESS)
-        {
-            command_list[i].fn();
-            return 1;
-        }
-    }
-    printf("Command %s is not valid\n", token);
-    return 0;
+        for (i = 0;buff_commands[i].name != NULL && (strcmp(token, buff_commands[i].name)) != 0; i++)
+            ;
+        if (buff_commands[i].name == NULL)
+            printf("Command %s is not valid\n", token);
+        else
+            buff_commands[i].fn();     
+    } while ((token = strtok(NULL, " ")));
 }

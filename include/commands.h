@@ -16,12 +16,11 @@ typedef struct {
 
 void macro_autocomplete(char* prefix, flow_struct* st);
 
-void command_exit();
 void command_print_arg();
 void command_remove();
 void command_print_serie();
 void command_print_message();
-void command_wd();
+void command_print_currentWorkingDir();
 void command_change_dir();
 void command_make_dir();
 void command_remove_dir();

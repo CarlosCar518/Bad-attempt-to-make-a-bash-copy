@@ -4,6 +4,7 @@
         "direct.h": "c",
         "stdio.h": "c",
         "commands.h": "c",
-        "stdlib.h": "c"
+        "stdlib.h": "c",
+        "dirent.h": "c"
     }
 }

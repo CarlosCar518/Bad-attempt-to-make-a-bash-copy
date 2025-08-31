@@ -27,10 +27,7 @@ void macro_autocomplete(char* prefix, flow_struct* st)
             int i;
             for (i = 0; prefix[i] == pathData.cFileName[i]; i++)
                 ;
-            while(pathData.cFileName[i] != '\0')
-            {
-                printf("%c",pathData.cFileName[i++]);
-            }
+            printf("%s",&pathData.cFileName[i]);
             break;
         }
     }

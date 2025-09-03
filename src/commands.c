@@ -3,10 +3,11 @@
 #include <string.h>
 #include <direct.h>
 #include <curl/curl.h>
-#include <Windows.h>
 #include <time.h>
+#include <sys/types.h>
 
-#include "commands.h"
+#include "../include/dirent.h"
+#include "../include/commands.h"
 
 void command_print_serie()
 {
@@ -99,33 +100,25 @@ void command_help()
 
 void command_listFiles()
 {
-    //I get the cwd and adjust it adding \* in order to get all the files and meet the Win API specifications
-    char* path = _getcwd(NULL, 0);
-    int pathLen = strlen(path);
-
-    path = realloc(path, pathLen + 3);
-
-    path[pathLen++] = '\\';
-    path[pathLen++] = '*';
-    path[pathLen] = '\0';
-
-    WIN32_FIND_DATAA pathData;
-    HANDLE hFind;
-
-    if ((hFind = FindFirstFile(path, &pathData)) == INVALID_HANDLE_VALUE )
+    DIR *dir = opendir(".");
+    if (!dir)
     {
-        printf("Erorr\n");
+        printf("Error");
     }
 
-    while (FindNextFile(hFind, &pathData))
+    struct dirent *ent;
+
+    while( (ent = readdir(dir)) != NULL)
     {
-        if (strcmp(pathData.cFileName, ".") == 0 || strcmp(pathData.cFileName, "..") == 0 )
+        if ((strcmp(ent->d_name, ".")) == 0  ||  (strcmp(ent->d_name, "..")) == 0)
+        {
             continue;
-        printf("%s\n", pathData.cFileName);
-    }
+        }
 
-    FindClose(hFind);
-    free(path);
+        printf("%s  ", ent->d_name);
+    }
+    printf("\n");
+    closedir(dir);
 }
 
 void command_print_date()

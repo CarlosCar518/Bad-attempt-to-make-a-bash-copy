@@ -14,7 +14,7 @@ typedef struct {
     size_t pos;
 }flow_struct;
 
-void macro_autocomplete(char* prefix, flow_struct* st);
+void dir_complete(flow_struct* st);
 
 void command_print_arg();
 void command_remove();

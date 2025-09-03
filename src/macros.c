@@ -3,56 +3,68 @@
 #include <string.h>
 #include <direct.h>
 #include <Windows.h>
-#include "commands.h"
 
-void macro_autocomplete(char* prefix, flow_struct* st)
+#include "../include/commands.h"
+#include "../include/dirent.h"
+
+void dir_complete(flow_struct* st)
 {
+    if (st->pos == 0)
+        return;
 
-    char* path = return_fixed_current_path();
+    char* prefix = NULL;
+    char* path = _getcwd(NULL, 0);
+
+    prefix = (strrchr(st->buff, ' '));
+    prefix = (prefix == NULL) ? st->buff : prefix + 1;
+
     size_t prefix_len = strlen(prefix);
 
-    WIN32_FIND_DATAA pathData;
-    HANDLE hFind;
-
-    if ((hFind = FindFirstFile(path, &pathData)) == INVALID_HANDLE_VALUE )
+    DIR *dir = opendir(path);
+    if(!dir)
+        printf("Error");
+    
+    struct dirent *ent;
+    while ((ent = readdir(dir)) != NULL)
     {
-        printf("Erorr\n");
-    }
-
-    while (FindNextFile(hFind, &pathData))
-    {
-        if(strnicmp(pathData.cFileName, prefix, prefix_len) == 0)
+        if(strnicmp(ent->d_name, prefix, prefix_len) == 0)
         {
             int i;
-            for (i = 0; prefix[i] == pathData.cFileName[i]; i++)
+            for (i = 0; prefix[i] == ent->d_name[i]; i++)
                 ;
-            printf("%s",&pathData.cFileName[i]);
+            printf("%s",&ent->d_name[i]);
             break;
         }
     }
 
-    size_t difference = strlen(pathData.cFileName) - strlen(prefix);
+    if (!ent)
+    {
+        closedir(dir);
+        free(path);
+        return;
+    }
 
-    char* temp = realloc(st->buff, (st->pos) + difference);
+    size_t diference = (strlen(ent->d_name) - strlen(prefix));
+    char *temp = realloc(st->buff, (st->pos) + diference + 1);
     if (!temp)
     {
-        free(temp);
+        free(st->buff);
+        st->buff = NULL;
+        return;
     }
-
-    char* last_token = (strrchr(st->buff, ' '));
+    st->buff = temp;
+    char* last_token = strrchr(st->buff, ' ');
 
     if (last_token)
-    {
         prefix = last_token + 1;
-    }
     else
-    {
         prefix = st->buff;
-    }
+    
+    strcpy(prefix, ent->d_name);
+    st->pos = strlen(st->buff);
 
-    strcpy(prefix, pathData.cFileName);
-
-    FindClose(hFind);
+    closedir(dir);
+    free(path);
 }
 
 char* return_fixed_current_path()

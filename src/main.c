@@ -3,12 +3,12 @@
 #include <string.h>
 #include <windows.h>
 #include <dirent.h>
-#include <conio.h>
-#include "commands.h"
+#include "../include/commands.h"
 
 #define KEY_TAB '\t'
 #define KEY_ENTER '\r'
 #define KEY_BACK_SPACE '\b'
+#define EXIT '\x1A'
 
 #define global_internal static
 #define internal static
@@ -21,14 +21,29 @@ typedef struct {
     cmd_fn fn;
 }commands;
 
+global_internal HANDLE wHndIn;
+global_internal HANDLE wHndOut;
+global_internal DWORD fdwSaveOldMode;
+global_internal int running;
+
 internal void shell_execute(flow_struct * st);
 internal void take_command(flow_struct st);
 internal void buffer_add_char(flow_struct* st, char c);
+internal void Key_event_proc(KEY_EVENT_RECORD ker, flow_struct *line);
+internal void error_exit(char* error);
+internal void Key_event_arrow(WORD key);
+
+/*
+* `cat <archivo>` → mostrar contenido de un archivo.
+* `grep <palabra> <archivo>` → buscar palabras en un archivo.
+* `history` → mostrar los últimos comandos ejecutados.
+* `exec <programa>` → ejecutar un programa externo (tipo Bash).
+*/
 
 global_internal commands buff_commands[] = { 
     {"lt" , command_print_serie}, 
     {"pm", command_print_message},
-    {"pr", command_print_arg}, 
+    {"echo", command_print_arg}, 
     {"rm", command_remove},
     {"pwd",command_print_currentWorkingDir},
     {"cd", command_change_dir},
@@ -49,56 +64,147 @@ int main(void)
 }
 
 internal void shell_execute(flow_struct* st)
-{
-    char* possible_aut;
-    char c;
-    printf("?");
-
-    while (1)
+{ 
+    DWORD cNumRead, fwMode, i;
+    INPUT_RECORD irInBuf[128];
+    
+    wHndIn = GetStdHandle(STD_INPUT_HANDLE);
+    if (wHndIn == INVALID_HANDLE_VALUE)
     {
-        if (_kbhit())
+        error_exit("GetStdHandle");
+    }
+    
+    wHndOut = GetStdHandle(STD_OUTPUT_HANDLE);
+
+    if (wHndIn == INVALID_HANDLE_VALUE)
+    {
+        error_exit("GetStdHandle");
+    }
+
+    if(!GetConsoleMode(wHndIn, &fdwSaveOldMode))
+    {
+        error_exit("GetConsoleMode");
+    }
+
+    fwMode = (ENABLE_WINDOW_INPUT | ENABLE_MOUSE_INPUT | ENABLE_EXTENDED_FLAGS) & ~ENABLE_QUICK_EDIT_MODE;
+    if (!SetConsoleMode(wHndIn, fwMode))
+    {
+        error_exit("SetConsoleMode");
+    }
+
+    running = 1;
+    printf("~");
+    while (running)
+    {
+        if (! ReadConsoleInput(wHndIn, irInBuf, 128, &cNumRead))
         {
-            c = _getch();
-            if (st->pos == 0 && (c == KEY_BACK_SPACE || c == KEY_ENTER))
-                continue;
-            
-            switch (c)
+            error_exit("ReadConsoleInput");
+        }
+
+        for (i = 0; i < cNumRead; i++)
+        {
+            switch (irInBuf[i].EventType)
             {
-            case  KEY_TAB:
-            
-                possible_aut = (strrchr(st->buff, ' '));
-                possible_aut = (possible_aut == NULL) ? st->buff : possible_aut + 1;
-                macro_autocomplete(possible_aut, st);
+            case KEY_EVENT:
+                Key_event_proc(irInBuf[i].Event.KeyEvent, st);
                 break;
 
+            default:
+                break;
+            }
+        }
+    }  
+}
+
+internal void Key_event_proc(KEY_EVENT_RECORD ker, flow_struct *line)
+{
+    CONSOLE_SCREEN_BUFFER_INFO csbi;
+    
+
+    if(ker.bKeyDown)
+    {
+        char key_pressed = ker.uChar.AsciiChar;
+
+        if (ker.wVirtualKeyCode == VK_LEFT || ker.wVirtualKeyCode == VK_DOWN ||
+            ker.wVirtualKeyCode == VK_UP   || ker.wVirtualKeyCode == VK_DOWN)
+        {
+            Key_event_arrow(ker.wVirtualKeyCode);
+            return;
+        }
+
+        switch (key_pressed)
+        {
             case KEY_ENTER:
-            
-                st->pos = 0;
+            {
+                if (line->pos == 0)
+                {
+                    break;
+                }
                 printf("\n");
-                if (strcmp(st->buff,"ex") == 0)
-                    return;
-
-                take_command(*st);
-                printf("?");
-                break;
+                take_command(*line);
+                printf("\n~");
+                line->pos = 0;
+                line->buff[0] = '\0';
+            }break;
 
             case KEY_BACK_SPACE:
-            
-                if (st->pos <= 0)
+            {
+                if (line->pos == 0)
+                {
                     break;
-                
-                st->pos--;
-                (st->buff)[st->pos] = '\0';
+                }
                 printf("\b \b");
-                break;
-                
+                (line->pos)--;
+                GetConsoleScreenBufferInfo(wHndOut, &csbi);
+            }break;
+
+            case KEY_TAB:
+            {
+                char* possible_aut = (strrchr(line->buff, ' '));
+                possible_aut = (possible_aut == NULL) ? line->buff : possible_aut + 1;
+
+                dir_complete(line);
+            }break;
+
+            case EXIT:
+            {
+                running = 0;
+            }break;
+
             default:
-            
-                buffer_add_char(st, c);
-                printf("%c",c);
-                break;  
-            }
-        }     
+            {
+                printf("%c",ker.uChar.AsciiChar);               
+                buffer_add_char(line, key_pressed);
+            }break;
+        }
+    }
+}
+
+internal void Key_event_arrow(WORD key)
+{
+    CONSOLE_SCREEN_BUFFER_INFO csbi;
+    GetConsoleScreenBufferInfo(wHndOut, &csbi);
+
+    COORD pos = csbi.dwCursorPosition;
+
+    switch (key)
+    {
+    case VK_LEFT:      
+    {
+        if (pos.X > 0) 
+        {
+            pos.X -= 1;
+            SetConsoleCursorPosition(wHndOut, pos);
+        }
+       
+    }break;
+    case VK_RIGHT:
+    {
+        pos.X += 1;
+        SetConsoleCursorPosition(wHndOut, pos);
+    }break;
+    default:
+        break;
     }
 }
 
@@ -109,8 +215,8 @@ internal void buffer_add_char(flow_struct* st, char c)
     if(!tmp)
     {
         free(st->buff);
-        free(tmp);
         st->buff = NULL;
+        return;
     }
     st->buff = tmp;
     (st->buff)[st->pos++] = c;
@@ -130,4 +236,13 @@ internal void take_command(flow_struct st)
         else
             buff_commands[i].fn();     
     } while ((token = strtok(NULL, " ")));
+}
+
+internal void error_exit(char* error)
+{
+    fprintf(stderr, "%s\n", error);
+
+    SetConsoleMode(wHndIn, fdwSaveOldMode);
+
+    ExitProcess(0);
 }

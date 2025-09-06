@@ -58,6 +58,7 @@ global_internal commands buff_commands[] = {
     {"time", command_print_date},
     {"jk", command_joke},
     {"clear", command_clear},
+    {"snake", _Smain},
     {NULL, NULL}};
 
 int main(void)

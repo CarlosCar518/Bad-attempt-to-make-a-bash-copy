@@ -30,6 +30,8 @@ void command_listFiles();
 void command_print_date();
 void command_joke();
 void command_clear();
+void _Smain();
+
 
 
 #endif 

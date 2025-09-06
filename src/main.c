@@ -25,13 +25,15 @@ global_internal HANDLE wHndOut;
 global_internal DWORD fdwSaveOldMode;
 global_internal int running;
 
-internal void shell_execute(flow_struct * st);
-internal void take_command(flow_struct st);
+internal void ShellEx(flow_struct * st);
+internal void ShellTakeCommand(flow_struct st);
 internal void buffer_add_char(flow_struct* st, char c);
-internal void Key_event_proc(KEY_EVENT_RECORD ker, flow_struct *line);
+internal void ShellKeyMain(KEY_EVENT_RECORD ker, flow_struct *line);
+internal void ShellKeyEventArrow(WORD key,flow_struct *line);
+internal void ShellKeyEvent(char key, flow_struct *line);
 internal void error_exit(char* error);
-internal void Key_event_arrow(WORD key,flow_struct *line);
-internal void key_event(char key, flow_struct *line);
+internal void ShellKeyEnter(flow_struct *line);
+internal void buffer_delete_char(flow_struct *line);
 internal void init_console();
 
 
@@ -61,11 +63,11 @@ global_internal commands buff_commands[] = {
 int main(void)
 {
     flow_struct line = {NULL, 0, 0};
-    shell_execute(&line);    
+    ShellEx(&line);    
     return 0;
 }
 
-internal void shell_execute(flow_struct* st)
+internal void ShellEx(flow_struct* st)
 { 
     DWORD cNumRead, i;
     INPUT_RECORD irInBuf[128];
@@ -86,7 +88,7 @@ internal void shell_execute(flow_struct* st)
             switch (irInBuf[i].EventType)
             {
             case KEY_EVENT:
-                Key_event_proc(irInBuf[i].Event.KeyEvent, st);
+                ShellKeyMain(irInBuf[i].Event.KeyEvent, st);
                 break;
 
             default:
@@ -96,50 +98,36 @@ internal void shell_execute(flow_struct* st)
     }  
 }
 
-internal void Key_event_proc(KEY_EVENT_RECORD ker, flow_struct *line)
+internal void ShellKeyMain(KEY_EVENT_RECORD ker, flow_struct *line)
 {
     if(ker.bKeyDown)
     {
         char key_pressed = ker.uChar.AsciiChar;
 
-        if (ker.wVirtualKeyCode == VK_LEFT || ker.wVirtualKeyCode == VK_DOWN ||
-            ker.wVirtualKeyCode == VK_UP   || ker.wVirtualKeyCode == VK_RIGHT)
+        if (ker.wVirtualKeyCode == VK_RIGHT || ker.wVirtualKeyCode == VK_LEFT ||
+            ker.wVirtualKeyCode == VK_UP    || ker.wVirtualKeyCode == VK_DOWN)
         {
-            Key_event_arrow(ker.wVirtualKeyCode, line);
+            ShellKeyEventArrow(ker.wVirtualKeyCode, line);
             return;
         }
         
-        key_event(key_pressed, line);
+        ShellKeyEvent(key_pressed, line);
 
     }
 }
 
-internal void key_event(char key, flow_struct *line)
+internal void ShellKeyEvent(char key, flow_struct *line)
 {
     switch (key)
     {
         case KEY_ENTER:
         {
-            if (line->pos == 0)
-            {
-                break;
-            }
-            printf("\n");
-            take_command(*line);
-            printf("\n~");
-            line->pos = 0;
-            line->buff[0] = '\0';
+            ShellKeyEnter(line);
         }break;
 
         case KEY_BACK_SPACE:
         {
-            if (line->cursor == 0)
-            {
-                break;
-            }
-            printf("\b\x1b[1P");
-            (line->pos)--;
-            (line->cursor)--;
+            buffer_delete_char(line);
         }break;
 
         case KEY_TAB:
@@ -156,16 +144,20 @@ internal void key_event(char key, flow_struct *line)
         }break;
 
         default:
-        {
-            printf("%c",key);               
+        {            
             buffer_add_char(line, key);
             (line->cursor)++;
+
+            if (line->cursor >= line->pos)
+                printf("%c",key);
+            else
+                printf("\x1b[1@%c",key);
         }break;
         
     }
 }
 
-internal void Key_event_arrow(WORD key,flow_struct *line)
+internal void ShellKeyEventArrow(WORD key,flow_struct *line)
 {
     switch (key)
     {
@@ -186,10 +178,32 @@ internal void Key_event_arrow(WORD key,flow_struct *line)
     }
 }
 
-
-
 internal void buffer_add_char(flow_struct* st, char c)
 {
+    if (st->cursor < st->pos)
+    {
+        size_t newSize = st->pos + 2;
+        char* tmp = realloc(st->buff, newSize);
+        if (!tmp)
+        {
+            free(st->buff);
+            st->buff = NULL;
+            return;
+        }
+        st->buff = tmp;
+
+        size_t lower_limit = st->cursor;
+        size_t upper_limit = st->pos + 1;
+
+        for(; upper_limit >= lower_limit; upper_limit--)
+            (st->buff)[upper_limit] = (st->buff)[upper_limit - 1];  //This loops moves all the chars 1 pos to the right
+         
+        (st->buff)[st->cursor] = c;
+        (st->pos)++;
+        return;
+    }
+
+
     char* tmp = realloc(st->buff, st->pos + 2);
 
     if(!tmp)
@@ -203,7 +217,38 @@ internal void buffer_add_char(flow_struct* st, char c)
     (st->buff)[st->pos] = '\0';
 }
 
-internal void take_command(flow_struct st)
+internal void buffer_delete_char(flow_struct *line)
+{
+    if (line->cursor == 0)
+    {
+        return;
+    }
+
+    if (line->cursor < line->pos)
+    {
+        (line->cursor)--;
+        size_t upper_limit = line->pos;
+        size_t lower_limit = line->cursor;  
+
+        for(;lower_limit < upper_limit; lower_limit++)
+        {
+            (line->buff)[lower_limit] = (line->buff)[lower_limit + 1];
+        }
+        
+        printf("\b\x1b[1P");
+        (line->pos)--;
+        line->buff = (char *)realloc(line->buff, line->pos);
+        return;
+    }
+
+    printf("\b\x1b[1P");
+    (line->pos)--;
+    (line->cursor)--;
+    (line->buff)[line->pos] = '\0';
+    line->buff = (char*)realloc(line->buff, line->pos);
+}
+
+internal void ShellTakeCommand(flow_struct st)
 {
     int i;
     char* token = strtok(st.buff, " ");
@@ -212,12 +257,46 @@ internal void take_command(flow_struct st)
         for (i = 0;buff_commands[i].name != NULL && (strcmp(token, buff_commands[i].name)) != 0; i++)
             ;
         if (buff_commands[i].name == NULL)
-            printf("Command %s is not valid\n", token);
+        {
+            printf("Command %s is not valid\x1b[1E", token);
+            return;
+        }
         else
             buff_commands[i].fn();     
     } while ((token = strtok(NULL, " ")));
 }
 
+internal void ShellKeyEnter(flow_struct *line)
+{
+    if (line->pos == 0)
+        return;
+
+    CONSOLE_SCREEN_BUFFER_INFO csbi;
+
+    if (!GetConsoleScreenBufferInfo(wHndOut, &csbi))
+    {
+        printf("GetConsoleScreenBufferInfo failed %ld\n", GetLastError());
+        return;
+    }
+    
+    if ((csbi.srWindow.Bottom - 2) <= csbi.dwCursorPosition.Y)
+    {
+        
+        printf("\x1b[3S");
+        printf("\x1b[u\x1b[3A");
+    }
+ 
+    printf("\x1b[1E");
+    ShellTakeCommand(*line);
+    printf("\x1b[1E~\x1b[s");
+
+    line->pos = 0;
+    line->cursor = 0;
+    line->buff[0] = '\0';
+}
+
+
+/*-------------------------------WINDOWS STUFF-----------------------------------------*/
 internal void error_exit(char* error)
 {
     fprintf(stderr, "%s\n", error);

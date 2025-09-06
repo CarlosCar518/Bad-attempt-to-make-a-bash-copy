@@ -146,5 +146,5 @@ void command_joke()
 
 void command_clear()
 {
-    system("cls");
+    printf("\x1b[2J");
 }

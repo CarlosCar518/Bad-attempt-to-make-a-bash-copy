@@ -2,4 +2,4 @@
 
 --I started to write a snake game, you can call it with the command snake. For now it just draws the head and you can move it around the terminal.
 
---It may sound funny, but the terminal does not work correctly on bash, I do not know why. It works perectly on cmd and powershell.
+--It may sound funny, but the terminal does not work correctly on bash, I do not know why. It works perfectly on cmd and powershell.

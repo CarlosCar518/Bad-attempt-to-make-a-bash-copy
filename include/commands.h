@@ -12,6 +12,7 @@ char* return_fixed_current_path();
 typedef struct {
     char* buff;
     size_t pos;
+    size_t cursor;
 }flow_struct;
 
 void dir_complete(flow_struct* st);

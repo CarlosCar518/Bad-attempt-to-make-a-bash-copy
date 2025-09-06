@@ -13,6 +13,7 @@
     "files.associations": {
         "string.h": "c",
         "stdio.h": "c",
-        "windows.h": "c"
+        "windows.h": "c",
+        "commands.h": "c"
     }
 }

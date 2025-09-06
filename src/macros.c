@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <direct.h>
 #include <Windows.h>
 
 #include "../include/commands.h"
@@ -13,14 +12,13 @@ void dir_complete(flow_struct* st)
         return;
 
     char* prefix = NULL;
-    char* path = _getcwd(NULL, 0);
 
     prefix = (strrchr(st->buff, ' '));
     prefix = (prefix == NULL) ? st->buff : prefix + 1;
 
     size_t prefix_len = strlen(prefix);
 
-    DIR *dir = opendir(path);
+    DIR *dir = opendir(".");
     if(!dir)
         printf("Error");
     
@@ -40,7 +38,6 @@ void dir_complete(flow_struct* st)
     if (!ent)
     {
         closedir(dir);
-        free(path);
         return;
     }
 
@@ -64,7 +61,6 @@ void dir_complete(flow_struct* st)
     st->pos = strlen(st->buff);
 
     closedir(dir);
-    free(path);
 }
 
 char* return_fixed_current_path()
